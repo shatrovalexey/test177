@@ -8,7 +8,7 @@ CREATE OR ALTER FUNCTION "SET_BIT_IN_OCTETS" (
     DETERMINISTIC
 AS
     DECLARE VARIABLE "V_OCTET" SMALLINT = 8;
-    DECLARE VARIABLE "V_LEN_MAX" SMALLINT = 100;
+    DECLARE VARIABLE "V_LEN_MAX" SMALLINT = 98;
     DECLARE VARIABLE "V_DATA_LEN" INTEGER;
     DECLARE VARIABLE "V_BYTE_INDEX" INTEGER;
     DECLARE VARIABLE "V_BYTE_VALUE" INTEGER;
@@ -18,18 +18,22 @@ AS
 BEGIN
     IF (
         (:"IN_POS" IS null)
-        OR (:"IN_POS" > :"V_LEN_MAX")
         OR (:"IN_SET" IS null)
         OR (:"IN_SET" NOT IN (0, 1))
+        OR (:"IN_POS" NOT BETWEEN 0 AND :"V_LEN_MAX" - 1)
     ) THEN
         RETURN null;
 
-    :"V_LEN" = octet_length(:"IN_VAL");
+    :"V_LEN" = octet_length(:"IN_VAL") - 2;
+    :"V_NULL" = ascii_char(0);
 
-    IF ((:"IN_VAL" IS null) OR (:"V_LEN" < 3)) THEN
+    IF ((:"IN_VAL" IS null) OR (:"V_LEN" < 1)) THEN
+    BEGIN
         :"IN_VAL" = :"V_NULL" || :"V_NULL";
+        :"V_LEN" = 0;
+    END
 
-    IF (:V_LEN < :IN_POS) THEN
+    IF (:"V_LEN" < :"IN_POS") THEN
     BEGIN
         :"V_LEN" = :"IN_POS" - :"V_LEN";
 
