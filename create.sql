@@ -1,37 +1,52 @@
 SET TERM ^ ;
+CREATE DOMAIN "BIT" AS SMALLINT DEFAULT 0 CHECK (VALUE IN (0, 1))^
+
 CREATE OR ALTER FUNCTION "SET_BIT_IN_OCTETS" (
-    "IN_VAL" VARCHAR(100) CHARACTER SET octets,
-    "IN_POS" INTEGER,
-    "IN_SET" SMALLINT
+    "IN_VAL" VARCHAR(100) CHARACTER SET octets
+    , "IN_POS" INTEGER
+    , "IN_SET" "BIT"
 )
     RETURNS VARCHAR(100) CHARACTER SET octets
     DETERMINISTIC
 AS
+    DECLARE VARIABLE "V_OCTET" SMALLINT = 8;
     DECLARE VARIABLE "V_DATA_LEN" INTEGER;
     DECLARE VARIABLE "V_BYTE_INDEX" INTEGER;
     DECLARE VARIABLE "V_BYTE_VALUE" INTEGER;
     DECLARE VARIABLE "V_MASK" INTEGER;
+    DECLARE VARIABLE "V_LEN" INTEGER;
 BEGIN
     IF (
-      (:"IN_VAL" IS null) OR
-      (:"IN_POS" IS null) OR
-      (:"IN_SET" IS null) OR
-      (:"IN_SET" NOT IN (0, 1)) OR
-      (octet_length(:"IN_VAL") < 3)
+        (:"IN_POS" IS null)
+        OR (:"IN_SET" IS null)
+        OR (:"IN_SET" NOT IN (0, 1))
     ) THEN
         RETURN null;
 
+    :"V_LEN" = octet_length(:"IN_VAL");
+
+    IF ((:"IN_VAL" IS null) OR (:"V_LEN" < 3)) THEN
+        :"IN_VAL" = '';
+
+    :"V_LEN" = 100 - :"V_LEN";
+
+    WHILE (:"V_LEN" > 0) DO
+    BEGIN
+        :"IN_VAL" = :"IN_VAL" || ascii_char(0);
+        :"V_LEN" = :"V_LEN" - 1;
+    END
+
     :"V_DATA_LEN" = bin_or(
-        bin_shl(ascii_val(substring(:"IN_VAL" FROM 1 FOR 1)), 8)
+        bin_shl(ascii_val(substring(:"IN_VAL" FROM 1 FOR 1)), :"V_OCTET")
         , ascii_val(substring(:"IN_VAL" FROM 2 FOR 1))
     );
 
-    IF (:"IN_POS" NOT BETWEEN 0 AND :"V_DATA_LEN" * 8 - 1) THEN
+    IF (:"IN_POS" NOT BETWEEN 0 AND :"V_DATA_LEN" * :"V_OCTET" - 1) THEN
         RETURN null;
 
-    :"V_BYTE_INDEX" = 3 + floor(:"IN_POS" / 8);
+    :"V_BYTE_INDEX" = 3 + floor(:"IN_POS" / :"V_OCTET");
     :"V_BYTE_VALUE" = ascii_val(substring(:"IN_VAL" FROM :"V_BYTE_INDEX" FOR 1));
-    :"V_MASK" = bin_shl(1, 7 - mod(:"IN_POS", 8));
+    :"V_MASK" = bin_shl(1, 7 - mod(:"IN_POS", :"V_OCTET"));
 
     RETURN
         substring(:"IN_VAL" FROM 1 FOR :"V_BYTE_INDEX" - 1)
