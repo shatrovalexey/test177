@@ -20,7 +20,6 @@ BEGIN
     IF (
         (:"IN_LEN" IS null)
         OR (:"IN_CHAR" IS null)
-        OR (:"IN_LEN" <= :"V_LEN")
     ) THEN
         RETURN :"IN_VAL";
 
