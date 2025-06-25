@@ -4,26 +4,25 @@ CREATE OR ALTER FUNCTION "STR_CHAR_PAD_OCTETS"(
     , "IN_CHAR" CHAR(1) CHARACTER SET octets
     , "IN_LEN" INTEGER
 )
-    RETURNS VARCHAR(100) CHARACTER SET octets
+    RETURNS VARCHAR(98) CHARACTER SET octets
     DETERMINISTIC
 AS
-    DECLARE "V_LEN" INTEGER;
+    DECLARE "V_LEN_MAX" INTEGER = 98;
     DECLARE "V_I" INTEGER;
 BEGIN
-    IF (
-        (:"IN_VAL" IS null)
-    ) THEN
-        RETURN null;
-
-    :"V_LEN" = octet_length(:"IN_VAL");
-
-    IF (
-        (:"IN_LEN" IS null)
-        OR (:"IN_CHAR" IS null)
-    ) THEN
+    IF (:"IN_LEN" IS null) THEN
         RETURN :"IN_VAL";
 
-    :"V_I" = :"IN_LEN" - :"V_LEN";
+    IF (:"IN_LEN" NOT BETWEEN 0 AND :"V_LEN_MAX") THEN
+        :"IN_LEN" = :"V_LEN_MAX";
+
+    IF (:"IN_CHAR" IS null) THEN
+        :"IN_CHAR" = ascii_char(0);
+
+    IF (:"IN_VAL" IS null) THEN
+        :"IN_VAL" = '';
+
+    :"V_I" = :"IN_LEN" - octet_length(:"IN_VAL");
 
     WHILE (:"V_I" > 0) DO
     BEGIN
