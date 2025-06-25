@@ -1,6 +1,4 @@
 SET TERM ^ ;
-CREATE DOMAIN "BIT" AS SMALLINT DEFAULT 0 CHECK (VALUE IN (0, 1))^
-
 CREATE OR ALTER FUNCTION "SET_BIT_IN_OCTETS" (
     "IN_VAL" VARCHAR(100) CHARACTER SET octets
     , "IN_POS" INTEGER
@@ -10,14 +8,16 @@ CREATE OR ALTER FUNCTION "SET_BIT_IN_OCTETS" (
     DETERMINISTIC
 AS
     DECLARE VARIABLE "V_OCTET" SMALLINT = 8;
+    DECLARE VARIABLE "V_LEN_MAX" SMALLINT = 100;
     DECLARE VARIABLE "V_DATA_LEN" INTEGER;
     DECLARE VARIABLE "V_BYTE_INDEX" INTEGER;
     DECLARE VARIABLE "V_BYTE_VALUE" INTEGER;
     DECLARE VARIABLE "V_MASK" INTEGER;
-    DECLARE VARIABLE "V_LEN" INTEGER;
+    DECLARE VARIABLE "V_LEN" SMALLINT;
 BEGIN
     IF (
         (:"IN_POS" IS null)
+        OR (:"IN_POS" > :"V_LEN_MAX")
         OR (:"IN_SET" IS null)
         OR (:"IN_SET" NOT IN (0, 1))
     ) THEN
@@ -28,12 +28,15 @@ BEGIN
     IF ((:"IN_VAL" IS null) OR (:"V_LEN" < 3)) THEN
         :"IN_VAL" = '';
 
-    :"V_LEN" = 100 - :"V_LEN";
-
-    WHILE (:"V_LEN" > 0) DO
+    IF (:V_LEN < :IN_POS) THEN
     BEGIN
-        :"IN_VAL" = :"IN_VAL" || ascii_char(0);
-        :"V_LEN" = :"V_LEN" - 1;
+        :"V_LEN" = :"IN_POS" - :"V_LEN";
+
+        WHILE (:"V_LEN" > 0) DO
+        BEGIN
+            :"IN_VAL" = :"IN_VAL" || ascii_char(0);
+            :"V_LEN" = :"V_LEN" - 1;
+        END
     END
 
     :"V_DATA_LEN" = bin_or(
