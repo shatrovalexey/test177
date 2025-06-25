@@ -14,6 +14,7 @@ AS
     DECLARE VARIABLE "V_BYTE_VALUE" INTEGER;
     DECLARE VARIABLE "V_MASK" INTEGER;
     DECLARE VARIABLE "V_LEN" SMALLINT;
+    DECLARE VARIABLE "V_NULL" CHAR(1) CHARACTER SET octets;
 BEGIN
     IF (
         (:"IN_POS" IS null)
@@ -26,7 +27,7 @@ BEGIN
     :"V_LEN" = octet_length(:"IN_VAL");
 
     IF ((:"IN_VAL" IS null) OR (:"V_LEN" < 3)) THEN
-        :"IN_VAL" = '';
+        :"IN_VAL" = :"V_NULL" || :"V_NULL";
 
     IF (:V_LEN < :IN_POS) THEN
     BEGIN
@@ -34,7 +35,7 @@ BEGIN
 
         WHILE (:"V_LEN" > 0) DO
         BEGIN
-            :"IN_VAL" = :"IN_VAL" || ascii_char(0);
+            :"IN_VAL" = :"IN_VAL" || :"V_NULL";
             :"V_LEN" = :"V_LEN" - 1;
         END
     END
