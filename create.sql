@@ -1,8 +1,45 @@
 SET TERM ^ ;
+CREATE OR ALTER FUNCTION "STR_CHAR_PAD_OCTETS"(
+    "IN_VAL" VARCHAR(98) CHARACTER SET octets
+    , "IN_CHAR" CHAR(1) CHARACTER SET octets
+    , "IN_LEN" INTEGER
+)
+    RETURNS VARCHAR(100) CHARACTER SET octets
+    DETERMINISTIC
+AS
+    DECLARE "V_LEN" INTEGER;
+    DECLARE "V_I" INTEGER;
+BEGIN
+    IF (
+        (:"IN_VAL" IS null)
+    ) THEN
+        RETURN null;
+
+    :"V_LEN" = octet_length(:"IN_VAL");
+
+    IF (
+        (:"IN_LEN" IS null)
+        OR (:"IN_CHAR" IS null)
+        OR (:"IN_LEN" <= :"V_LEN")
+    ) THEN
+        RETURN :"IN_VAL";
+
+    :"V_I" = :"IN_LEN" - :"V_LEN";
+
+    WHILE (:"V_I" > 0) DO
+    BEGIN
+        :"IN_VAL" = :"IN_VAL" || :"IN_CHAR";
+        :"V_I" = :"V_I" - 1;
+    END
+
+    RETURN :"IN_VAL";
+END
+^
+
 CREATE OR ALTER FUNCTION "SET_BIT_IN_OCTETS" (
     "IN_VAL" VARCHAR(100) CHARACTER SET octets
     , "IN_POS" INTEGER
-    , "IN_SET" "BIT"
+    , "IN_SET" SMALLINT
 )
     RETURNS VARCHAR(100) CHARACTER SET octets
     DETERMINISTIC
@@ -29,20 +66,12 @@ BEGIN
 
     IF ((:"IN_VAL" IS null) OR (:"V_LEN" < 1)) THEN
     BEGIN
-        :"IN_VAL" = :"V_NULL" || :"V_NULL";
+        :"IN_VAL" = "STR_CHAR_PAD_OCTETS"('', :"V_NULL", 2);
         :"V_LEN" = 0;
     END
 
     IF (:"V_LEN" < :"IN_POS") THEN
-    BEGIN
-        :"V_LEN" = :"IN_POS" - :"V_LEN";
-
-        WHILE (:"V_LEN" > 0) DO
-        BEGIN
-            :"IN_VAL" = :"IN_VAL" || :"V_NULL";
-            :"V_LEN" = :"V_LEN" - 1;
-        END
-    END
+        :"IN_VAL" = :"IN_VAL" || "STR_CHAR_PAD_OCTETS"('', :"V_NULL", :"IN_POS" - :"V_LEN");
 
     :"V_DATA_LEN" = bin_or(
         bin_shl(ascii_val(substring(:"IN_VAL" FROM 1 FOR 1)), :"V_OCTET")
@@ -69,6 +98,9 @@ BEGIN
             )
             || substring(:"IN_VAL" FROM :"V_BYTE_INDEX" + 1);
 END
+^
+
+COMMENT ON FUNCTION "STR_CHAR_PAD_OCTETS" IS 'Дополняет строку символами до нужной длинны строки'
 ^
 
 COMMENT ON FUNCTION "SET_BIT_IN_OCTETS" IS 'Задача для собеседования (Firebird, хранимая функция):
